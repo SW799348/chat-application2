@@ -1,12 +1,4 @@
-package lk.ijse;
-
-import lk.ijse.controller.ClientFormController;
-import lk.ijse.controller.LoginFormController;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -43,11 +35,14 @@ public class SimpleChatServer {
     private void handleClient(Socket clientSocket, PrintWriter writer) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-           // broadcastMessage(username + " has joined the chat.");
 
             String clientMessage;
             while ((clientMessage = reader.readLine()) != null) {
-                broadcastMessage(clientMessage);
+                if (clientMessage.startsWith("[file]")) {
+                    receiveFile(clientMessage, clientSocket.getInputStream());
+                } else {
+                    broadcastMessage(clientMessage);
+                }
             }
 
         } catch (IOException e) {
@@ -60,6 +55,31 @@ public class SimpleChatServer {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void receiveFile(String message, InputStream inputStream) {
+        try {
+            String[] parts = message.split(" ");
+            String fileName = parts[2];
+            File file = new File("received_files/" + fileName);
+
+            FileOutputStream fileOutputStream = new FileOutputStream(file);
+            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                bufferedOutputStream.write(buffer, 0, bytesRead);
+            }
+
+            bufferedOutputStream.close();
+            System.out.println("File received: " + fileName);
+
+            broadcastMessage("[file] " + fileName);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
